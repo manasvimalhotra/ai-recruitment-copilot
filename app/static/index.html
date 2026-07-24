@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Recruitment Copilot — Resume Parsing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F5F7FB;
+    --card: #FFFFFF;
+    --border: #E4E9F2;
+    --ink: #16213E;
+    --ink-soft: #6B7794;
+    --accent: #3457D5;
+    --accent-soft: #EAEFFE;
+    --accent-dark: #26399E;
+    --good: #16A34A;
+    --good-soft: #E9F9EF;
+    --warn: #DC7C2A;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(22,33,62,0.04), 0 8px 24px -12px rgba(22,33,62,0.10);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter', -apple-system, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:32px 24px 80px;}
+ 
+  header.top{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:28px;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand .mark{
+    width:38px; height:38px; border-radius:10px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-dark));
+    display:flex; align-items:center; justify-content:center;
+    color:white; font-family:'Sora'; font-weight:700; font-size:15px;
+    box-shadow: 0 4px 12px -2px rgba(52,87,213,0.45);
+  }
+  .brand h1{font-family:'Sora'; font-size:17px; font-weight:600; margin:0; letter-spacing:-0.01em;}
+  .brand p{margin:0; font-size:12.5px; color:var(--ink-soft);}
+  .milestone-badge{
+    background:var(--accent-soft); color:var(--accent-dark);
+    font-size:12.5px; font-weight:600; padding:6px 14px; border-radius:999px;
+    font-family:'Sora';
+  }
+ 
+  .grid{display:grid; grid-template-columns: 1fr 1.25fr; gap:20px; margin-bottom:20px;}
+  @media(max-width:860px){.grid{grid-template-columns:1fr;}}
+ 
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:22px 24px; box-shadow:var(--shadow);
+  }
+  .card h2{
+    font-family:'Sora'; font-size:15px; font-weight:600; margin:0 0 4px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .card .sub{font-size:12.5px; color:var(--ink-soft); margin:0 0 18px;}
+ 
+  /* Upload zone */
+  .dropzone{
+    border:1.5px dashed #C7D1E8; border-radius:12px; padding:34px 18px;
+    text-align:center; cursor:pointer; transition: all .15s ease;
+    background:#FBFCFE;
+  }
+  .dropzone:hover, .dropzone.drag{border-color:var(--accent); background:var(--accent-soft);}
+  .dropzone .icon{
+    width:44px; height:44px; margin:0 auto 12px; border-radius:10px;
+    background:var(--accent-soft); display:flex; align-items:center; justify-content:center;
+  }
+  .dropzone .icon svg{stroke:var(--accent);}
+  .dropzone p{margin:0 0 14px; font-size:13.5px; color:var(--ink-soft);}
+  .btn{
+    background:var(--accent); color:white; border:none; border-radius:8px;
+    padding:9px 18px; font-family:'Inter'; font-weight:600; font-size:13.5px;
+    cursor:pointer; transition: background .15s ease;
+  }
+  .btn:hover{background:var(--accent-dark);}
+  .btn:disabled{background:#B7C2E0; cursor:not-allowed;}
+  .btn.ghost{
+    background:transparent; color:var(--accent); border:1px solid var(--border);
+  }
+  .btn.ghost:hover{background:var(--accent-soft); border-color:var(--accent);}
+  .hint{font-size:11.5px; color:#9AA5C0; margin-top:12px;}
+ 
+  .uploaded-file{
+    margin-top:14px; display:flex; align-items:center; gap:10px;
+    background:#F8FAFF; border:1px solid var(--border); border-radius:10px; padding:10px 12px;
+  }
+  .uploaded-file .fi{width:30px; height:30px; border-radius:7px; background:var(--accent-soft); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .uploaded-file .meta{font-size:12.5px; line-height:1.4; overflow:hidden;}
+  .uploaded-file .meta b{display:block; font-weight:600; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;}
+  .uploaded-file .meta span{color:var(--ink-soft);}
+ 
+  /* Stats */
+  .stat-row{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;}
+  .stat{
+    background:#FBFCFE; border:1px solid var(--border); border-radius:10px;
+    padding:12px 14px;
+  }
+  .stat .num{
+    font-family:'JetBrains Mono'; font-variant-numeric:tabular-nums;
+    font-size:22px; font-weight:600; color:var(--accent-dark); line-height:1.1;
+  }
+  .stat .lbl{font-size:11px; color:var(--ink-soft); margin-top:4px;}
+ 
+  .progress-track{
+    height:7px; border-radius:99px; background:#EDF1FA; overflow:hidden; margin-bottom:20px;
+  }
+  .progress-fill{
+    height:100%; border-radius:99px;
+    background:linear-gradient(90deg, var(--accent), #5B7CFA);
+    transition: width .5s ease;
+  }
+ 
+  .extracted h3{font-size:12.5px; font-family:'Sora'; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; margin:0 0 12px;}
+  .field-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px 20px; margin-bottom:16px;}
+  .field .k{font-size:11px; color:var(--ink-soft); margin-bottom:2px;}
+  .field .v{font-size:13.5px; font-weight:500;}
+  .skills-row{display:flex; flex-wrap:wrap; gap:6px;}
+  .chip{
+    background:var(--accent-soft); color:var(--accent-dark); font-size:12px; font-weight:600;
+    padding:4px 10px; border-radius:999px; font-family:'Inter';
+  }
+  .empty-state{
+    text-align:center; color:var(--ink-soft); font-size:13px; padding:24px 12px;
+  }
+ 
+  /* Table */
+  table{width:100%; border-collapse:collapse; margin-top:6px;}
+  thead th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--ink-soft); font-weight:600; padding:0 12px 10px; border-bottom:1px solid var(--border);
+  }
+  tbody td{padding:12px; font-size:13.5px; border-bottom:1px solid #F0F3FA; vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#FAFBFF;}
+  .name-cell b{display:block; font-weight:600;}
+  .name-cell span{font-size:12px; color:var(--ink-soft);}
+  .skills-cell{display:flex; flex-wrap:wrap; gap:5px; max-width:260px;}
+  .status-pill{
+    display:inline-flex; align-items:center; gap:5px;
+    background:var(--good-soft); color:var(--good); font-size:12px; font-weight:600;
+    padding:4px 10px; border-radius:999px;
+  }
+  .status-pill::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--good);}
+  .row-actions{display:flex; gap:8px;}
+  .icon-btn{
+    width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:white;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-soft);
+  }
+  .icon-btn:hover{border-color:#F2A9A9; color:#DC2626; background:#FEF2F2;}
+ 
+  .table-head-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+ 
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:white; padding:11px 20px; border-radius:9px; font-size:13px;
+    opacity:0; transition:all .25s ease; pointer-events:none; font-weight:500;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+ 
+  <header class="top">
+    <div class="brand">
+      <div class="mark">AI</div>
+      <div>
+        <h1>Recruitment Copilot</h1>
+        <p>Resume Parsing &amp; Candidate Profiling</p>
+      </div>
+    </div>
+    <div class="milestone-badge">Milestone 1</div>
+  </header>
+ 
+  <div class="grid">
+    <!-- Upload card -->
+    <div class="card">
+      <h2>Upload Resume</h2>
+      <p class="sub">Drop a file or click to browse</p>
+ 
+      <div class="dropzone" id="dropzone">
+        <div class="icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <p>Drag and drop a resume here</p>
+        <button class="btn" id="browseBtn" type="button">Upload File</button>
+        <input type="file" id="fileInput" accept=".pdf,.docx" hidden />
+        <div class="hint">Supported formats: PDF, DOCX</div>
+      </div>
+ 
+      <div id="uploadedFile"></div>
+    </div>
+ 
+    <!-- Parsing progress card -->
+    <div class="card">
+      <h2>Parsing Progress</h2>
+      <p class="sub">Live stats from your candidate database</p>
+ 
+      <div class="stat-row">
+        <div class="stat">
+          <div class="num" id="statCount">0</div>
+          <div class="lbl">Resumes Processed</div>
+        </div>
+        <div class="stat">
+          <div class="num" id="statAccuracy">0%</div>
+          <div class="lbl">Avg. Extraction Accuracy</div>
+        </div>
+        <div class="stat">
+          <div class="num" id="statCreated">0</div>
+          <div class="lbl">Profiles Created</div>
+        </div>
+      </div>
+ 
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+ 
+      <div class="extracted">
+        <h3>Most Recent Extraction</h3>
+        <div id="extractedInfo"><div class="empty-state">Upload a resume to see extracted fields here.</div></div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- Candidates table -->
+  <div class="card">
+    <div class="table-head-row">
+      <h2 style="margin:0;">Recently Processed Candidates</h2>
+      <button class="btn ghost" id="exportBtn">Export CSV</button>
+    </div>
+    <div id="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Candidate</th>
+            <th>Experience</th>
+            <th>Key Skills</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="candidateRows"></tbody>
+      </table>
+      <div id="tableEmpty" class="empty-state" style="display:none;">No candidates yet — upload a resume to get started.</div>
+    </div>
+  </div>
+ 
+</div>
+ 
+<div class="toast" id="toast"></div>
+ 
+<script>
+const API = '/api';
+ 
+const el = (id) => document.getElementById(id);
+const toast = (msg, isError=false) => {
+  const t = el('toast');
+  t.textContent = msg;
+  t.style.background = isError ? '#DC2626' : '#16213E';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+};
+ 
+function fmtExperience(years){
+  if (years === null || years === undefined) return '—';
+  return `${years} yr${years === 1 ? '' : 's'}`;
+}
+ 
+function initials(name){
+  if (!name) return '?';
+  return name.split(' ').filter(Boolean).slice(0,2).map(w => w[0].toUpperCase()).join('');
+}
+ 
+function renderExtracted(c){
+  if (!c){
+    el('extractedInfo').innerHTML = '<div class="empty-state">Upload a resume to see extracted fields here.</div>';
+    return;
+  }
+  const skills = (c.skills || []).slice(0, 8)
+    .map(s => `<span class="chip">${s}</span>`).join('');
+  el('extractedInfo').innerHTML = `
+    <div class="field-grid">
+      <div class="field"><div class="k">Name</div><div class="v">${c.name || '—'}</div></div>
+      <div class="field"><div class="k">Email</div><div class="v">${c.email || '—'}</div></div>
+      <div class="field"><div class="k">Phone</div><div class="v">${c.phone || '—'}</div></div>
+      <div class="field"><div class="k">Experience</div><div class="v">${fmtExperience(c.total_experience_years)}</div></div>
+    </div>
+    <div class="skills-row">${skills || '<span class="empty-state" style="padding:0;">No skills detected</span>'}</div>
+  `;
+}
+ 
+function renderTable(candidates){
+  const rows = el('candidateRows');
+  const empty = el('tableEmpty');
+  if (!candidates.length){
+    rows.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  rows.innerHTML = candidates.map(c => {
+    const skills = (c.skills || []).slice(0,3).map(s => `<span class="chip">${s}</span>`).join('');
+    return `
+      <tr data-id="${c.id}">
+        <td class="name-cell"><b>${c.name || 'Unknown'}</b><span>${c.email || '—'}</span></td>
+        <td>${fmtExperience(c.total_experience_years)}</td>
+        <td><div class="skills-cell">${skills || '—'}</div></td>
+        <td><span class="status-pill">Processed</span></td>
+        <td>
+          <div class="row-actions">
+            <button class="icon-btn" title="Delete" onclick="deleteCandidate(${c.id})">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+ 
+function renderStats(candidates){
+  const count = candidates.length;
+  const avgAcc = count
+    ? Math.round(candidates.reduce((s,c) => s + (c.extraction_accuracy || 0), 0) / count)
+    : 0;
+  el('statCount').textContent = count;
+  el('statAccuracy').textContent = `${avgAcc}%`;
+  el('statCreated').textContent = count;
+  el('progressFill').style.width = `${avgAcc}%`;
+}
+ 
+async function loadCandidates(){
+  try{
+    const res = await fetch(`${API}/candidates/?limit=100`);
+    if (!res.ok) throw new Error('Failed to load candidates');
+    const candidates = await res.json();
+    candidates.sort((a,b) => b.id - a.id);
+    renderStats(candidates);
+    renderTable(candidates);
+    renderExtracted(candidates[0] || null);
+  }catch(err){
+    console.error(err);
+    toast('Could not load candidates — is the server running?', true);
+  }
+}
+ 
+async function uploadResume(file){
+  const form = new FormData();
+  form.append('file', file);
+ 
+  el('uploadedFile').innerHTML = `
+    <div class="uploaded-file">
+      <div class="fi">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3457D5" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div class="meta"><b>${file.name}</b><span>Uploading…</span></div>
+    </div>`;
+ 
+  try{
+    const res = await fetch(`${API}/upload/resume`, { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Upload failed');
+ 
+    el('uploadedFile').innerHTML = `
+      <div class="uploaded-file">
+        <div class="fi">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3457D5" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="meta"><b>${file.name}</b><span>Uploaded just now · ${(file.size/1024).toFixed(1)} KB</span></div>
+      </div>`;
+    toast('Resume parsed and profile created.');
+    loadCandidates();
+  }catch(err){
+    console.error(err);
+    el('uploadedFile').innerHTML = '';
+    toast(err.message || 'Upload failed', true);
+  }
+}
+ 
+async function deleteCandidate(id){
+  if (!confirm('Delete this candidate profile?')) return;
+  try{
+    const res = await fetch(`${API}/candidates/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Delete failed');
+    toast('Candidate deleted.');
+    loadCandidates();
+  }catch(err){
+    toast(err.message || 'Delete failed', true);
+  }
+}
+ 
+el('browseBtn').addEventListener('click', () => el('fileInput').click());
+el('fileInput').addEventListener('change', (e) => {
+  if (e.target.files[0]) uploadResume(e.target.files[0]);
+});
+ 
+const dz = el('dropzone');
+['dragenter','dragover'].forEach(evt =>
+  dz.addEventListener(evt, (e) => { e.preventDefault(); dz.classList.add('drag'); })
+);
+['dragleave','drop'].forEach(evt =>
+  dz.addEventListener(evt, (e) => { e.preventDefault(); dz.classList.remove('drag'); })
+);
+dz.addEventListener('drop', (e) => {
+  const file = e.dataTransfer.files[0];
+  if (file) uploadResume(file);
+});
+dz.addEventListener('click', (e) => {
+  if (e.target.id !== 'browseBtn') el('fileInput').click();
+});
+ 
+el('exportBtn').addEventListener('click', () => {
+  window.location.href = `${API}/candidates/export/csv`;
+});
+ 
+loadCandidates();
+</script>
+</body>
+</html>
+ 

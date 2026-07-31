@@ -1,14 +1,23 @@
+"""
+main.py
+-------
+FastAPI application entry point for the AI Recruitment & Talent
+Management Copilot -- Milestone 1: Resume Parsing & Candidate Profiling.
+ 
+Run locally with:
+    uvicorn app.main:app --reload
+"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
  
 from app.database import init_db
-from app.routes import upload, candidate
+from app.routes import upload, candidate, job, match
  
 app = FastAPI(
     title="AI Recruitment & Talent Management Copilot",
-    description="Milestone 1: Resume Parsing & Candidate Profiling",
-    version="0.1.0",
+    description="Milestone 1: Resume Parsing & Candidate Profiling. Milestone 2: Matching & Skill Analysis.",
+    version="0.2.0",
 )
  
 # Allow the React dashboard (or any frontend) to call this API during development.
@@ -23,6 +32,8 @@ app.add_middleware(
  
 app.include_router(upload.router)
 app.include_router(candidate.router)
+app.include_router(job.router)
+app.include_router(match.router)
  
 # Frontend dashboard -- served at /dashboard/ so it doesn't collide with
 # the existing "/" API-info route below.

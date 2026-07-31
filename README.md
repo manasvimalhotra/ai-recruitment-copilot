@@ -279,5 +279,5 @@ git merge upstream/main
 
 ## Next Milestones (per project plan)
 
-- Milestone 3: AI-powered candidate ranking/scoring
+-Milestone 3:Interview Assistance & ATS Integration
 - Milestone 4: Interview scheduling & communication automation
